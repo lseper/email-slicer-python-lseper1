@@ -27,6 +27,22 @@ PROMPT = "Please enter your Email Id:"
 INVALID_MSG = "Please enter a valid Email Id."
 
 
+def expected_success_output(username: str, domain: str) -> str:
+    """Build the expected three-line stdout block for a successful slice.
+
+    Centralizes the original script's double-space quirk from
+    `print("Your username is: ", username)` (a comma, not an f-string,
+    so print()'s automatic inter-arg space produces "...is:  <value>")
+    so every happy-path/boundary test shares one definition instead of
+    re-typing the literal.
+    """
+    return (
+        f"{PROMPT}\n"
+        f"Your username is:  {username}\n"
+        f"Your domain is:  {domain}\n"
+    )
+
+
 def run_cli(stdin_text: str, args: list[str] | None = None) -> subprocess.CompletedProcess:
     """Invoke the real emailSlicer.py entry point non-interactively."""
     return subprocess.run(
@@ -56,11 +72,7 @@ class TestEmailSlicerCliHappyPath:
         # survive the refactor byte-for-byte.
         result = run_cli("avimax37@gmail.com\n")
 
-        expected_stdout = (
-            f"{PROMPT}\n"
-            "Your username is:  avimax37\n"
-            "Your domain is:  gmail.com\n"
-        )
+        expected_stdout = expected_success_output("avimax37", "gmail.com")
 
         assert result.returncode == 0
         assert result.stdout == expected_stdout
@@ -83,11 +95,7 @@ class TestEmailSlicerCliBoundary:
         # FIRST "@", so "a@b@c.com" -> username "a", domain "b@c.com".
         result = run_cli("a@b@c.com\n")
 
-        expected_stdout = (
-            f"{PROMPT}\n"
-            "Your username is:  a\n"
-            "Your domain is:  b@c.com\n"
-        )
+        expected_stdout = expected_success_output("a", "b@c.com")
 
         assert result.returncode == 0
         assert result.stdout == expected_stdout
@@ -114,11 +122,7 @@ class TestEmailSlicerCliBoundary:
         # sole criterion (contains "@"); username and domain are both "".
         result = run_cli("@\n")
 
-        expected_stdout = (
-            f"{PROMPT}\n"
-            "Your username is:  \n"
-            "Your domain is:  \n"
-        )
+        expected_stdout = expected_success_output("", "")
 
         assert result.returncode == 0
         assert result.stdout == expected_stdout
@@ -152,11 +156,7 @@ class TestEmailSlicerCliArgsIgnored:
     def test_extra_command_line_arguments_do_not_affect_behavior(self):
         result = run_cli("avimax37@gmail.com\n", args=["--bogus-flag", "ignored"])
 
-        expected_stdout = (
-            f"{PROMPT}\n"
-            "Your username is:  avimax37\n"
-            "Your domain is:  gmail.com\n"
-        )
+        expected_stdout = expected_success_output("avimax37", "gmail.com")
 
         assert result.returncode == 0
         assert result.stdout == expected_stdout
